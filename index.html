@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo de Futebol Completo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .scoreboard {
+      display: flex;
+      align-items: center;
+      font-size: 1.5rem;
+      gap: 15px;
+    }
+
+    .team {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    .team.A { 
+      background: rgba(0, 0, 255, 0.3); 
+      border: 2px solid blue;
+    }
+    .team.B { 
+      background: rgba(255, 0, 0, 0.3);
+      border: 2px solid red;
+    }
+
+    .score {
+      font-size: 2rem;
+      font-weight: bold;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .timer {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: yellow;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+      border: 1px solid yellow;
+    }
+
+    .field-wrapper {
+      width: 98%;
+      height: 300px;
+      background: #006400;
+      position: relative;
+      border: 4px solid white;
+      box-shadow: 0 0 20px lime;
+      overflow: hidden;
+    }
+
+    /* Linhas do campo - NOVO DESIGN */
+    .field-line {
+      position: absolute;
+      border: 2px solid white;
+    }
+
+    .midline {
+      top: 0;
+      left: 50%;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+
+    .center-circle {
+      width: 100px;
+      height: 100px;
+      border: 2px solid white;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .center-spot {
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Linhas da grande área - NOVO */
+    .penalty-area {
+      position: absolute;
+      border: 2px solid white;
+      top: 50%;
+      height: 140px;
+      width: 120px;
+      transform: translateY(-50%);
+    }
+
+    .penalty-area.left { 
+      left: 0; 
+      border-right: none;
+      border-top-right-radius: 20px;
+      border-bottom-right-radius: 20px;
+    }
+    .penalty-area.right { 
+      right: 0; 
+      border-left: none;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+    }
+
+    /* Linhas da pequena área - NOVO */
+    .goal-area {
+      position: absolute;
+      border: 2px solid white;
+      top: 50%;
+      height: 80px;
+      width: 40px;
+      transform: translateY(-50%);
+    }
+
+    .goal-area.left { 
+      left: 0; 
+      border-right: none;
+    }
+    .goal-area.right { 
+      right: 0; 
+      border-left: none;
+    }
+
+    /* Gols modernos */
+    .goal {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 120px;
+      background: #fff;
+      z-index: 1;
+      border-radius: 4px;
+    }
+
+    .goal.left { 
+      left: 0;
+      box-shadow: 3px 0 8px rgba(0,0,0,0.7);
+    }
+    .goal.right { 
+      right: 0;
+      box-shadow: -3px 0 8px rgba(0,0,0,0.7);
+    }
+
+    /* Redes dos gols - mais realista */
+    .goal-net {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 60px;
+      height: 120px;
+      border: 3px solid #555;
+      z-index: 0;
+      overflow: hidden;
+      background: rgba(200, 200, 200, 0.1);
+    }
+
+    .goal-net.left {
+      left: 8px;
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+    }
+
+    .goal-net.right {
+      right: 8px;
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+    }
+
+    /* Padrão da rede */
+    .goal-net::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px) 0 0 / 8px 8px,
+        linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 1px) 0 0 / 8px 8px;
+      transform-origin: center;
+    }
+
+    .goal-net.left::before {
+      transform: perspective(300px) rotateY(30deg);
+    }
+
+    .goal-net.right::before {
+      transform: perspective(300px) rotateY(-30deg);
+    }
+
+    /* Jogadores e bola */
+    .player {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 14px;
+      font-weight: bold;
+      color: white;
+      transition: all 0.2s ease-out;
+      z-index: 2;
+    }
+
+    .A { 
+      background: blue; 
+      box-shadow: 0 0 10px rgba(0, 0, 255, 0.7);
+    }
+    .B { 
+      background: red; 
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+    }
+
+    /* Destaque do jogador em ação */
+    .jogador-em-acao {
+      box-shadow: 0 0 25px yellow, 0 0 15px white !important;
+      border: 2px solid yellow !important;
+      transform: scale(1.1) !important;
+      transition: all 0.2s ease-out;
+    }
+
+    /* Indicador de posse de bola */
+    .influencia-bola {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .influencia-bola.ativa {
+      opacity: 0.7;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .influencia-bola.pode-agir {
+      background: rgba(255, 255, 0, 0.3);
+      opacity: 0.9;
+    }
+
+    .ball {
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      z-index: 3;
+      transition: all 0.3s ease-out;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    }
+
+    .controls {
+      margin-top: 20px;
+      width: 100%;
+      text-align: center;
+    }
+
+    input {
+      width: 90%;
+      max-width: 500px;
+      padding: 12px 15px;
+      font-size: 1rem;
+      border-radius: 25px;
+      border: 2px solid #555;
+      background: #222;
+      color: white;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: lime;
+    }
+
+    .instructions {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    /* Animação de gol */
+    @keyframes golAnimation {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+      10% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      90% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    }
+
+    .gol-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: bold;
+      color: yellow;
+      text-shadow: 0 0 10px black, 0 0 20px black;
+      z-index: 10;
+      animation: golAnimation 2s forwards;
+      pointer-events: none;
+    }
+
+    /* Efeito de trajetória da bola */
+    .ball-trail {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Animação da rede quando gol */
+    @keyframes redeAnimation {
+      0% { transform: translateY(-50%); }
+      20% { transform: translateY(-50%) scaleX(1.05) scaleY(0.95); }
+      40% { transform: translateY(-50%) scaleX(0.95) scaleY(1.05); }
+      60% { transform: translateY(-50%) scaleX(1.03) scaleY(0.97); }
+      80% { transform: translateY(-50%) scaleX(0.97) scaleY(1.03); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .rede-gol {
+      animation: redeAnimation 1s ease-out;
+    }
+
+    /* Botão de som */
+    .sound-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid #555;
+      color: white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 100;
+    }
+
+    .sound-toggle:hover {
+      background: rgba(0,0,0,0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="game-header">
+      <div class="scoreboard">
+        <div class="team A">Time A</div>
+        <div class="score" id="score">0 - 0</div>
+        <div class="team B">Time B</div>
+      </div>
+      <div class="timer" id="timer">05:00</div>
+    </div>
+    
+    <div class="field-wrapper" id="field">
+      <!-- Linhas do campo -->
+      <div class="field-line midline"></div>
+      <div class="center-circle"></div>
+      <div class="center-spot"></div>
+      
+      <!-- Áreas do campo - NOVO -->
+      <div class="penalty-area left"></div>
+      <div class="penalty-area right"></div>
+      
+      <div class="goal-area left"></div>
+      <div class="goal-area right"></div>
+      
+      <!-- Gols com redes - ATUALIZADO -->
+      <div class="goal left"></div>
+      <div class="goal-net left"></div>
+      
+      <div class="goal right"></div>
+      <div class="goal-net right"></div>
+
+      <!-- Jogadores -->
+      <div class="player A" id="p1" style="top: 30%; left: 15%;">1</div>
+      <div class="player A" id="p2" style="top: 50%; left: 25%;">2</div>
+      <div class="player A" id="p3" style="top: 70%; left: 15%;">3</div>
+
+      <div class="player B" id="p4" style="top: 30%; left: 85%;">4</div>
+      <div class="player B" id="p5" style="top: 50%; left: 75%;">5</div>
+      <div class="player B" id="p6" style="top: 70%; left: 85%;">6</div>
+
+      <!-- Bola (mantida no centro) -->
+      <div class="ball" id="ball" style="top: 50%; left: 50%;"></div>
+    </div>
+
+    <!-- Controles -->
+    <div class="controls">
+      <input type="text" id="command" placeholder="Digite: 1 cima, 2 chutar, 5 passe 4..." autocomplete="off" />
+      <div class="instructions">
+        Comandos: [número] [cima/baixo/esquerda/direita/chutar/passe número]
+      </div>
+    </div>
+
+    <!-- Botão de som -->
+    <button class="sound-toggle" id="soundToggle">🔊</button>
+  </div>
+
+  <!-- Elementos de áudio atualizados -->
+<audio id="apitoInicio" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Apito(3).mp3" preload="auto"></audio>
+<audio id="apitoGol" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Apito(5).mp3" preload="auto"></audio>
+<audio id="somChute" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Chute(4).mp3" preload="auto"></audio>
+<audio id="somPasse" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/chute(2).mp3" preload="auto"></audio>
+<audio id="bolaRede" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Bola%20na%20Rede.mp3" preload="auto"></audio>
+<audio id="bolaTrave" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Bola%20na%20Rede.mp3" preload="auto"></audio>
+<audio id="torcidaGolA" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Gol(6).mp3" preload="auto"></audio>
+<audio id="torcidaGolB" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Gol(6).mp3" preload="auto"></audio>
+<audio id="torcidaReacao" src="https://github.com/Velmax07/meus-sons-futebol/raw/refs/heads/main/Express%C3%A3o%20da%20Tocida(2).mp3" preload="auto"></audio>
+<audio id="comandoAceito" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
+
+  <script>
+    // Elementos do jogo
+    const players = {
+      1: document.getElementById('p1'),
+      2: document.getElementById('p2'),
+      3: document.getElementById('p3'),
+      4: document.getElementById('p4'),
+      5: document.getElementById('p5'),
+      6: document.getElementById('p6'),
+    };
+
+    const ball = document.getElementById('ball');
+    const scoreElement = document.getElementById('score');
+    const timerElement = document.getElementById('timer');
+    const commandInput = document.getElementById('command');
+    const field = document.getElementById('field');
+    const soundToggle = document.getElementById('soundToggle');
+    
+    // Elementos de áudio
+    const sounds = {
+      apitoInicio: document.getElementById('apitoInicio'),
+      apitoGol: document.getElementById('apitoGol'),
+      chute: document.getElementById('somChute'),
+      passe: document.getElementById('somPasse'),
+      bolaRede: document.getElementById('bolaRede'),
+      bolaTrave: document.getElementById('bolaTrave'),
+      torcidaGolA: document.getElementById('torcidaGolA'),
+      torcidaGolB: document.getElementById('torcidaGolB'),
+      torcidaReacao: document.getElementById('torcidaReacao'),
+      comandoAceito: document.getElementById('comandoAceito')
+    };
+    
+    // Estado do jogo
+    let score = { A: 0, B: 0 };
+    let gameTime = 5 * 60; // 5 minutos
+    let gameInterval;
+    let gameActive = true;
+    let lastKicker = null;
+    let ballTrails = [];
+    let soundEnabled = true;
+    let influenceIndicators = {};
+    
+    // Cria indicadores de influência para cada jogador
+    Object.keys(players).forEach(num => {
+      const indicator = document.createElement('div');
+      indicator.className = 'influencia-bola';
+      players[num].appendChild(indicator);
+      influenceIndicators[num] = indicator;
+    });
+
+    // Posições iniciais
+    const initialPositions = {
+      1: { top: 30, left: 15 },
+      2: { top: 50, left: 25 },
+      3: { top: 70, left: 15 },
+      4: { top: 30, left: 85 },
+      5: { top: 50, left: 75 },
+      6: { top: 70, left: 85 },
+      ball: { top: 50, left: 50 }
+    };
+
+    // Inicia o jogo
+    function initGame() {
+      resetPositions();
+      updateScore();
+      startTimer();
+      commandInput.focus();
+      
+      // Limpa trilhas antigas
+      ballTrails.forEach(trail => trail.remove());
+      ballTrails = [];
+      
+      // Toca apito inicial
+      playSound('apitoInicio');
+      
+      // Inicia verificação de influência
+      setInterval(checkBallInfluence, 100);
+    }
+
+    // Toca um som
+    function playSound(soundName) {
+      if (!soundEnabled) return;
+      
+      try {
+        sounds[soundName].currentTime = 0;
+        sounds[soundName].play().catch(e => console.log("Erro ao tocar som:", e));
+      } catch (e) {
+        console.log("Erro com som:", e);
+      }
+    }
+
+    // Alterna som ligado/desligado
+    soundToggle.addEventListener('click', function() {
+      soundEnabled = !soundEnabled;
+      this.textContent = soundEnabled ? '🔊' : '🔇';
+    });
+
+    // Reseta as posições
+    function resetPositions() {
+      for (const [id, player] of Object.entries(players)) {
+        setPosition(player, initialPositions[id].top, initialPositions[id].left);
+      }
+      setPosition(ball, initialPositions.ball.top, initialPositions.ball.left);
+      lastKicker = null;
+    }
+
+    // Atualiza o placar
+    function updateScore() {
+      scoreElement.textContent = `${score.A} - ${score.B}`;
+    }
+
+    // Inicia o temporizador
+    function startTimer() {
+      clearInterval(gameInterval);
+      gameInterval = setInterval(() => {
+        gameTime--;
+        
+        const minutes = Math.floor(gameTime / 60);
+        const seconds = gameTime % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (gameTime <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // Finaliza o jogo
+    function endGame() {
+      gameActive = false;
+      clearInterval(gameInterval);
+      
+      // Limpa qualquer mensagem pendente
+      const existingMessages = document.querySelectorAll('.gol-message');
+      existingMessages.forEach(msg => msg.remove());
+      
+      const winner = score.A > score.B ? "Time A" : score.B > score.A ? "Time B" : null;
+      const message = winner 
+        ? `Fim de jogo! ${winner} venceu por ${Math.max(score.A, score.B)} a ${Math.min(score.A, score.B)}!`
+        : `Fim de jogo! Empate em ${score.A} a ${score.B}!`;
+      
+      showMessage(message, true);
+      playSound('apitoInicio');
+    }
+
+    // Verifica gol
+    function checkGoal() {
+      const ballPos = getPosition(ball);
+      
+      // Gol do Time A (bola no gol direito)
+      if (ballPos.left >= 98) {
+        score.A++;
+        updateScore();
+        showMessage("GOOOOL DO TIME A!", false, 'lime');
+        playSound('apitoGol');
+        playSound('bolaRede');
+        playSound('torcidaGolA');
+        animateGoalNet('right');
+        setTimeout(resetPositions, 1500);
+        return;
+      }
+      
+      // Gol do Time B (bola no gol esquerdo)
+      if (ballPos.left <= 2) {
+        score.B++;
+        updateScore();
+        showMessage("GOOOOL DO TIME B!", false, 'yellow');
+        playSound('apitoGol');
+        playSound('bolaRede');
+        playSound('torcidaGolB');
+        animateGoalNet('left');
+        setTimeout(resetPositions, 1500);
+        return;
+      }
+      
+      // Verifica se bateu na trave (lado direito)
+      if (ballPos.left >= 95 && ballPos.left < 98 && (ballPos.top <= 40 || ballPos.top >= 60)) {
+        playSound('bolaTrave');
+        showMessage("QUASE! Na trave!", false, 'orange');
+      }
+      
+      // Verifica se bateu na trave (lado esquerdo)
+      if (ballPos.left <= 5 && ballPos.left > 2 && (ballPos.top <= 40 || ballPos.top >= 60)) {
+        playSound('bolaTrave');
+        showMessage("QUASE! Na trave!", false, 'orange');
+      }
+    }
+
+    // Anima a rede do gol
+    function animateGoalNet(side) {
+      const net = document.querySelector(`.goal-net.${side}`);
+      net.classList.add('rede-gol');
+      setTimeout(() => net.classList.remove('rede-gol'), 1000);
+    }
+
+    // Mostra mensagem temporária
+    function showMessage(msg, isEndGame = false, color = 'yellow') {
+      // Remove mensagens anteriores
+      const existingMessages = document.querySelectorAll('.gol-message');
+      existingMessages.forEach(msg => msg.remove());
+      
+      const msgElement = document.createElement('div');
+      msgElement.className = 'gol-message';
+      msgElement.textContent = msg;
+      msgElement.style.color = color;
+      
+      if (isEndGame) {
+        msgElement.style.fontSize = '2rem';
+        msgElement.style.animation = 'none';
+        msgElement.style.opacity = '1';
+      }
+      
+      field.appendChild(msgElement);
+      
+      if (!isEndGame) {
+        setTimeout(() => msgElement.remove(), 2000);
+      }
+    }
+
+    // Cria efeito de trilha da bola
+    function createBallTrail() {
+      const trail = document.createElement('div');
+      trail.className = 'ball-trail';
+      const ballPos = getPosition(ball);
+      trail.style.left = ballPos.left + '%';
+      trail.style.top = ballPos.top + '%';
+      field.appendChild(trail);
+      ballTrails.push(trail);
+      
+      // Remove trilhas antigas
+      if (ballTrails.length > 10) {
+        const oldTrail = ballTrails.shift();
+        oldTrail.remove();
+      }
+    }
+
+    // Obtém posição
+    function getPosition(el) {
+      return {
+        top: parseFloat(el.style.top),
+        left: parseFloat(el.style.left)
+      };
+    }
+
+    // Define posição com verificação de gol
+    function setPosition(el, top, left) {
+      // Limita os valores entre 0 e 100
+      const limitedTop = Math.max(0, Math.min(100, top));
+      const limitedLeft = Math.max(0, Math.min(100, left));
+      
+      el.style.top = limitedTop + '%';
+      el.style.left = limitedLeft + '%';
+      
+      // Cria efeito de trilha para a bola
+      if (el.id === 'ball') {
+        createBallTrail();
+        setTimeout(checkGoal, 50);
+      }
+    }
+
+    // Verifica influência dos jogadores na bola
+    function checkBallInfluence() {
+      if (!gameActive) return;
+      
+      const ballPos = getPosition(ball);
+      let closestPlayer = null;
+      let minDistance = Infinity;
+      
+      // Verifica distância de cada jogador até a bola
+      for (const [num, player] of Object.entries(players)) {
+        const playerPos = getPosition(player);
+        const distance = Math.sqrt(
+          Math.pow(playerPos.top - ballPos.top, 2) + 
+          Math.pow(playerPos.left - ballPos.left, 2)
+        );
+        
+        // Atualiza indicador de influência
+        const indicator = influenceIndicators[num];
+        if (distance < 15) {
+          indicator.classList.add('ativa');
+          if (distance < 10) {
+            indicator.classList.add('pode-agir');
+          } else {
+            indicator.classList.remove('pode-agir');
+          }
+        } else {
+          indicator.classList.remove('ativa', 'pode-agir');
+        }
+        
+        // Encontra jogador mais próximo
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPlayer = num;
+        }
+      }
+      
+      // Destaque sutil no jogador mais próximo da bola
+      if (closestPlayer) {
+        const player = players[closestPlayer];
+        player.style.boxShadow = player.classList.contains('A') 
+          ? '0 0 15px rgba(0, 0, 255, 0.9)' 
+          : '0 0 15px rgba(255, 0, 0, 0.9)';
+          
+        setTimeout(() => {
+          player.style.boxShadow = player.classList.contains('A') 
+            ? '0 0 10px rgba(0, 0, 255, 0.7)' 
+            : '0 0 10px rgba(255, 0, 0, 0.7)';
+        }, 500);
+      }
+    }
+
+    // Move jogador
+    function move(player, direction) {
+      if (!gameActive) return;
+      
+      let pos = getPosition(player);
+      const speed = 3.5;
+      
+      switch(direction) {
+        case 'cima': pos.top -= speed; break;
+        case 'baixo': pos.top += speed; break;
+        case 'esquerda': pos.left -= speed; break;
+        case 'direita': pos.left += speed; break;
+      }
+      
+      setPosition(player, pos.top, pos.left);
+    }
+
+    // Chuta a bola - FÍSICA CORRIGIDA
+    function chutar(player) {
+      if (!gameActive) return;
+      
+      const playerPos = getPosition(player);
+      const ballPos = getPosition(ball);
+      
+      // Calcula distância entre jogador e bola
+      const dist = Math.sqrt(
+        Math.pow(playerPos.top - ballPos.top, 2) + 
+        Math.pow(playerPos.left - ballPos.left, 2)
+      );
+      
+      // Verifica se está perto o suficiente para chutar
+      if (dist < 10) {
+        lastKicker = player;
+        
+        // Destaque visual do jogador em ação
+        player.classList.add('jogador-em-acao');
+        setTimeout(() => player.classList.remove('jogador-em-acao'), 1000);
+        
+        // Calcula a direção do chute (para frente do jogador)
+        // O jogador empurra a bola para longe de si
+        const diffX = ballPos.left - playerPos.left;
+        const diffY = ballPos.top - playerPos.top;
+        
+        // Normaliza o vetor (mantém direção mas com comprimento 1)
+        const length = Math.sqrt(diffX * diffX + diffY * diffY);
+        const dirX = diffX / length;
+        const dirY = diffY / length;
+        
+        // Aplica força do chute (com pequena variação aleatória)
+        const force = 20 + Math.random() * 5;
+        const newLeft = ballPos.left + dirX * force;
+        const newTop = ballPos.top + dirY * force;
+        
+        setPosition(ball, newTop, newLeft);
+        
+        // Efeito visual ao chutar
+        player.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+          player.style.transform = 'scale(1)';
+        }, 200);
+        
+        // Som do chute
+        playSound('chute');
+      } else {
+        showMessage(`Jogador ${player.textContent} está longe da bola!`, false, 'orange');
+        playSound('torcidaReacao');
+      }
+    }
+
+    // Passa a bola
+    function passar(player, receiverNum) {
+      if (!gameActive) return;
+      
+      const receiver = players[receiverNum];
+      if (!receiver) {
+        showMessage(`Jogador ${receiverNum} não existe!`, false, 'orange');
+        return;
+      }
+      
+      const playerPos = getPosition(player);
+      const ballPos = getPosition(ball);
+      
+      // Verifica distância até a bola
+      const distToBall = Math.sqrt(
+        Math.pow(playerPos.top - ballPos.top, 2) + 
+        Math.pow(playerPos.left - ballPos.left, 2)
+      );
+      
+      if (distToBall > 10) {
+        showMessage(`Jogador ${player.textContent} está longe da bola!`, false, 'orange');
+        playSound('torcidaReacao');
+        return;
+      }
+      
+      // Verifica se é do mesmo time
+      if (player.classList.contains('A') !== receiver.classList.contains('A')) {
+        showMessage("Só pode passar para seu time!", false, 'orange');
+        playSound('torcidaReacao');
+        return;
+      }
+      
+      lastKicker = player;
+      
+      // Destaque visual do jogador em ação
+      player.classList.add('jogador-em-acao');
+      setTimeout(() => player.classList.remove('jogador-em-acao'), 1000);
+      
+      const receiverPos = getPosition(receiver);
+      
+      // Calcula direção do passe (com pequeno desvio aleatório)
+      const diffX = receiverPos.left - ballPos.left;
+      const diffY = receiverPos.top - ballPos.top;
+      
+      // Normaliza e aplica força
+      const length = Math.sqrt(diffX * diffX + diffY * diffY);
+      const dirX = diffX / length;
+      const dirY = diffY / length;
+      
+      // Adiciona um pouco de aleatoriedade no passe
+      const randomFactor = 0.2;
+      const newLeft = ballPos.left + dirX * length * 0.7 + (Math.random() * randomFactor - randomFactor/2);
+      const newTop = ballPos.top + dirY * length * 0.7 + (Math.random() * randomFactor - randomFactor/2);
+      
+      setPosition(ball, newTop, newLeft);
+      
+      // Efeito visual
+      player.style.transform = 'scale(1.1)';
+      receiver.style.boxShadow = '0 0 15px white';
+      setTimeout(() => {
+        player.style.transform = 'scale(1)';
+        receiver.style.boxShadow = player.classList.contains('A') 
+          ? '0 0 10px rgba(0, 0, 255, 0.7)' 
+          : '0 0 10px rgba(255, 0, 0, 0.7)';
+      }, 300);
+      
+      // Som do passe
+      playSound('passe');
+    }
+
+    // Controles
+    commandInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        if (!gameActive) {
+          showMessage("Jogo terminado! Atualize a página para jogar novamente.", false, 'red');
+          return;
+        }
+        
+        const input = this.value.trim().toLowerCase();
+        if (!input) return;
+        
+        const parts = input.split(' ');
+        const num = parts[0];
+        const comando = parts[1];
+        
+        const jogador = players[num];
+        if (jogador) {
+          playSound('comandoAceito');
+          
+          if (["cima", "baixo", "esquerda", "direita"].includes(comando)) {
+            move(jogador, comando);
+          } else if (comando === 'chutar') {
+            chutar(jogador);
+          } else if (comando === 'passe' && parts[2]) {
+            passar(jogador, parts[2]);
+          } else {
+            showMessage("Comando inválido!", false, 'orange');
+          }
+        } else {
+          showMessage("Jogador não encontrado! Use números de 1 a 6.", false, 'orange');
+        }
+        
+        this.value = '';
+      }
+    });
+
+    // Inicia o jogo
+    initGame();
+  </script>
+</body>
+</html>
